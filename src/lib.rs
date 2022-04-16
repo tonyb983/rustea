@@ -6,7 +6,9 @@ use std::{
 };
 
 use crossterm::{
-    cursor, event, execute,
+    cursor,
+    event::{read, Event},
+    execute,
     style::Print,
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
     ExecutableCommand,
@@ -42,9 +44,14 @@ pub fn run(app: impl App) -> Result<()> {
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
     let cmd_tx2 = cmd_tx.clone();
 
-    thread::spawn(move || loop {
-        let event = Box::new(event::read().unwrap());
-        msg_tx.send(event).unwrap();
+    thread::spawn(move || {
+        loop {
+            match read().unwrap() {
+                Event::Key(event) => msg_tx.send(Box::new(event)).unwrap(),
+                // TODO: handle these events
+                _ => panic!("unexpected event"),
+            }
+        }
     });
 
     thread::spawn(move || {
