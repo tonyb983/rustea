@@ -14,6 +14,8 @@ use crossterm::{
     ExecutableCommand,
 };
 
+pub use crossterm::event as crossterm_event;
+
 pub trait App {
     fn init(&self) -> Option<Command> {
         None
