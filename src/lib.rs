@@ -1,6 +1,3 @@
-// expose crossterm so consumers can use events
-pub extern crate crossterm;
-
 use std::{
     any::Any,
     io::{stdout, Result, Stdout},
