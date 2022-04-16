@@ -1,4 +1,4 @@
-use crossterm::event::{KeyCode, KeyEvent};
+use rustea::crossterm::event::{KeyCode, KeyEvent};
 use rustea::{quit_cmd, App, Command, Message};
 
 struct Model {
