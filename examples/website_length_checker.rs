@@ -1,3 +1,4 @@
+use crossterm::event::KeyModifiers;
 use rustea::{
     command,
     crossterm::event::{KeyCode, KeyEvent},
@@ -13,6 +14,12 @@ struct Model {
 impl App for Model {
     fn update(&mut self, msg: Message) -> Option<Command> {
         if let Some(key_event) = msg.downcast_ref::<KeyEvent>() {
+            if let KeyModifiers::CONTROL = key_event.modifiers {
+                if let KeyCode::Char('c') = key_event.code {
+                    return Some(Box::new(command::quit));
+                }
+            }
+
             match key_event.code {
                 KeyCode::Enter => {
                     let url = self.url_input.buffer();
