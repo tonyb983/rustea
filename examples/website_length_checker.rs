@@ -1,12 +1,13 @@
 use rustea::{
-    component::input::Input,
-    crossterm_event::{KeyCode, KeyEvent},
+    command,
+    crossterm::event::{KeyCode, KeyEvent},
+    view_helper::input::Input,
     App, Command, Message,
 };
 
 struct Model {
     url_input: Input,
-    website_length: Option<usize>,
+    website_lengths: Vec<usize>,
 }
 
 impl App for Model {
@@ -17,12 +18,18 @@ impl App for Model {
                     let url = self.url_input.buffer();
                     self.url_input.clear();
 
-                    return Some(make_request_command(&url));
+                    // make 3 requests to demonstrate command batching
+                    let commands = vec![
+                        make_request_command(&url),
+                        make_request_command(&url),
+                        make_request_command(&url),
+                    ];
+                    return Some(command::batch(commands));
                 }
                 _ => self.url_input.on_key_event(*key_event),
             }
         } else if let Some(len) = msg.downcast_ref::<WebsiteLengthMessage>() {
-            self.website_length = Some(len.0);
+            self.website_lengths.push(len.0);
         }
 
         None
@@ -33,8 +40,8 @@ impl App for Model {
             "Website URL (press enter when done): {}",
             self.url_input.buffer()
         );
-        if let Some(len) = self.website_length {
-            out.push_str(&format!("\nWebsite length: {}", len));
+        for (i, len) in self.website_lengths.iter().enumerate() {
+            out.push_str(&format!("\nHit {} length: {}", i, len));
         }
 
         out
@@ -52,7 +59,7 @@ fn make_request_command(url: &str) -> Command {
 fn main() {
     rustea::run(Model {
         url_input: Input::new(),
-        website_length: None,
+        website_lengths: Vec::new(),
     })
     .unwrap();
 }

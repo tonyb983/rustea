@@ -1,4 +1,6 @@
-pub mod component;
+pub mod view_helper;
+pub extern crate crossterm;
+pub mod command;
 
 use std::{
     any::Any,
@@ -15,8 +17,6 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
 
-pub use crossterm::event as crossterm_event;
-
 pub trait App {
     fn init(&self) -> Option<Command> {
         None
@@ -29,16 +29,6 @@ pub trait App {
 pub type Message = Box<dyn Any + Send>;
 
 pub type Command = Box<dyn FnOnce() -> Option<Message> + Send + 'static>;
-
-struct Quit;
-pub fn quit_cmd() -> Option<Message> {
-    Some(Box::new(Quit))
-}
-
-struct Batch(Vec<Command>);
-pub fn batch_cmd(cmds: Vec<Command>) -> Option<Message> {
-    Some(Box::new(Batch(cmds)))
-}
 
 pub fn run(app: impl App) -> Result<()> {
     let mut app = app;
@@ -77,11 +67,10 @@ pub fn run(app: impl App) -> Result<()> {
 
     loop {
         let msg = msg_rx.recv().unwrap();
-        if msg.is::<Quit>() {
+        if msg.is::<command::QuitMessage>() {
             break;
-        } else if msg.is::<Batch>() {
-            // First check with is, then downcast so we can update without owning msg.
-            let batch = msg.downcast::<Batch>().unwrap();
+        } else if msg.is::<command::BatchMessage>() {
+            let batch = msg.downcast::<command::BatchMessage>().unwrap();
             for cmd in batch.0 {
                 cmd_tx.send(cmd).unwrap();
             }

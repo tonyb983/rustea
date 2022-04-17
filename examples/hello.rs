@@ -1,5 +1,5 @@
-use rustea::crossterm_event::{KeyCode, KeyEvent, KeyModifiers};
-use rustea::{quit_cmd, App, Command, Message};
+use rustea::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use rustea::{command, App, Command, Message};
 
 struct Model {
     last_key: Option<char>,
@@ -10,7 +10,7 @@ impl App for Model {
         if let Ok(key_event) = msg.downcast::<KeyEvent>() {
             if let KeyModifiers::CONTROL = key_event.modifiers {
                 match key_event.code {
-                    KeyCode::Char('c') => return Some(Box::new(quit_cmd)),
+                    KeyCode::Char('c') => return Some(Box::new(command::quit)),
                     _ => return None,
                 }
             }

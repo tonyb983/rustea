@@ -1,6 +1,6 @@
-use rustea::component::input::Input;
-use rustea::crossterm_event::{KeyCode, KeyEvent, KeyModifiers};
-use rustea::{quit_cmd, App, Command, Message};
+use rustea::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use rustea::view_helper::input::Input;
+use rustea::{command, App, Command, Message};
 
 struct Model {
     input: Input,
@@ -12,23 +12,19 @@ impl App for Model {
         if let Ok(key_event) = msg.downcast::<KeyEvent>() {
             if let KeyModifiers::CONTROL = key_event.modifiers {
                 match key_event.code {
-                    KeyCode::Char('c') => return Some(Box::new(quit_cmd)),
+                    KeyCode::Char('c') => return Some(Box::new(command::quit)),
                     _ => return None,
                 }
             }
 
             match key_event.code {
-                KeyCode::Char(_) => {
-                    self.input.on_key_event(*key_event);
-                    return None;
-                }
                 KeyCode::Enter => {
                     self.name = Some(self.input.buffer().to_owned());
                     self.input.clear();
                     // return Some(quit_cmd);
                     return None;
                 }
-                _ => unimplemented!(),
+                _ => self.input.on_key_event(*key_event),
             }
         };
 
@@ -36,7 +32,13 @@ impl App for Model {
     }
 
     fn view(&self) -> String {
-        let output = format!("Enter your name: {}", self.input.buffer());
+        let prompt = "Enter your name: ";
+        let output = format!(
+            "{}{}\n{}^",
+            prompt,
+            self.input.buffer(),
+            " ".repeat(prompt.len() + self.input.pos())
+        );
         if let Some(name) = &self.name {
             format!("{}\nHello, {}!", output, name)
         } else {
