@@ -2,6 +2,12 @@
 name = "rustea"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+description = "An easy-to-use TUI crate for Rust, based off of the Elm architecture."
+homepage = "https://github.com/lazops/rustea"
+documentation = "https://docs.rs/rustea"
+readme = "README.md"
+repository = "https://github.com/lazops/rustea"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
