@@ -64,6 +64,10 @@ pub type Message = Box<dyn Any + Send>;
 /// }
 pub type Command = Box<dyn FnOnce() -> Option<Message> + Send + 'static>;
 
+/// Event representing a terminal resize (x, y).
+/// Boxed as a message so it can be sent to the application.
+pub struct ResizeEvent(pub u16, pub u16);
+
 /// The trait your model must implement in order to be `run`.
 ///
 /// `init` is called once when the model is run for the first time, and optionally returns a `Command`.
@@ -104,13 +108,11 @@ pub fn run(app: impl App) -> Result<()> {
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
     let cmd_tx2 = cmd_tx.clone();
 
-    thread::spawn(move || {
-        loop {
-            match read().unwrap() {
-                Event::Key(event) => msg_tx.send(Box::new(event)).unwrap(),
-                // TODO: handle these events
-                _ => (),
-            }
+    thread::spawn(move || loop {
+        match read().unwrap() {
+            Event::Key(event) => msg_tx.send(Box::new(event)).unwrap(),
+            Event::Mouse(event) => msg_tx.send(Box::new(event)).unwrap(),
+            Event::Resize(x, y) => msg_tx.send(Box::new(ResizeEvent(x, y))).unwrap(),
         }
     });
 
