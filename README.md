@@ -1,3 +1,11 @@
+# RusTea
+
+An easy-to-use TUI crate for Rust, based off of the Elm architecture.
+This is a re-implementation of Go's [Tea](https://github.com/tj/go-tea), created by TJ Holowaychuk.
+
+## Quickstart
+
+```rust
 use rustea::crossterm_event::{KeyCode, KeyEvent, KeyModifiers};
 use rustea::{quit_cmd, App, Command, Message};
 
@@ -10,7 +18,7 @@ impl App for Model {
         if let Ok(key_event) = msg.downcast::<KeyEvent>() {
             if let KeyModifiers::CONTROL = key_event.modifiers {
                 match key_event.code {
-                    KeyCode::Char('c') => return Some(Box::new(quit_cmd)),
+                    KeyCode::Char('c') => return Some(quit_cmd),
                     _ => return None,
                 }
             }
@@ -37,3 +45,6 @@ fn main() {
 
     rustea::run(model).unwrap();
 }
+
+
+```

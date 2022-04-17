@@ -25,7 +25,8 @@ impl Input {
         self.buffer.clear()
     }
 
-    pub fn buffer(&self) -> &str {
-        &self.buffer
+    pub fn buffer(&self) -> String {
+        // return owned buffer so buffer can be read and cleared together
+        self.buffer.to_owned()
     }
 }

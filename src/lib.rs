@@ -28,7 +28,7 @@ pub trait App {
 
 pub type Message = Box<dyn Any + Send>;
 
-pub type Command = fn() -> Option<Message>;
+pub type Command = Box<dyn FnOnce() -> Option<Message> + Send + 'static>;
 
 struct Quit;
 pub fn quit_cmd() -> Option<Message> {
@@ -57,11 +57,12 @@ pub fn run(app: impl App) -> Result<()> {
 
     thread::spawn(move || {
         let cmd = cmd_rx.recv().unwrap();
+
         thread::spawn(move || {
             if let Some(msg) = cmd() {
                 msg_tx2.send(msg).unwrap();
             }
-        })
+        });
     });
 
     initialize(&mut stdout, &app, cmd_tx2)?;

@@ -12,7 +12,7 @@ impl App for Model {
         if let Ok(key_event) = msg.downcast::<KeyEvent>() {
             if let KeyModifiers::CONTROL = key_event.modifiers {
                 match key_event.code {
-                    KeyCode::Char('c') => return Some(quit_cmd),
+                    KeyCode::Char('c') => return Some(Box::new(quit_cmd)),
                     _ => return None,
                 }
             }
