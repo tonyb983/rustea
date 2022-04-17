@@ -12,7 +12,6 @@ impl Input {
     }
 
     pub fn on_key_event(&mut self, key_event: KeyEvent) {
-        println!("{:?}", key_event);
         match key_event.code {
             KeyCode::Backspace => {
                 self.buffer.pop();
@@ -20,6 +19,10 @@ impl Input {
             KeyCode::Char(c) => self.buffer.push(c),
             _ => (),
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.buffer.clear()
     }
 
     pub fn buffer(&self) -> &str {

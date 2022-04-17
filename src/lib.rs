@@ -1,3 +1,5 @@
+pub mod component;
+
 use std::{
     any::Any,
     io::{stdout, Result, Stdout},
@@ -11,7 +13,6 @@ use crossterm::{
     execute,
     style::Print,
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
-    ExecutableCommand,
 };
 
 pub use crossterm::event as crossterm_event;
@@ -64,6 +65,8 @@ pub fn run(app: impl App) -> Result<()> {
     });
 
     initialize(&mut stdout, &app, cmd_tx2)?;
+    let mut prev = normalized_view(&app);
+    execute!(stdout, Print(&prev))?;
 
     loop {
         let msg = msg_rx.recv().unwrap();
@@ -75,7 +78,10 @@ pub fn run(app: impl App) -> Result<()> {
             cmd_tx.send(cmd).unwrap();
         }
 
-        paint_screen(&mut stdout, &app.view())?;
+        let curr = normalized_view(&app);
+        clear_lines(&mut stdout, prev.matches("\r\n").count())?;
+        execute!(stdout, Print(&curr))?;
+        prev = curr;
     }
 
     deinitialize(&mut stdout)
@@ -87,18 +93,27 @@ fn initialize(stdout: &mut Stdout, app: &impl App, cmd_tx: Sender<Command>) -> R
     }
 
     enable_raw_mode()?;
-    stdout.execute(cursor::Hide)?;
-    paint_screen(stdout, &app.view())
+    execute!(stdout, cursor::Hide)?;
+
+    Ok(())
 }
 
-fn paint_screen(stdout: &mut Stdout, s: &str) -> Result<()> {
-    for line in s.lines() {
+fn normalized_view(app: &impl App) -> String {
+    let view = app.view();
+    let view = if !view.ends_with("\n") {
+        view + "\n"
+    } else {
+        view
+    };
+    view.replace("\n", "\r\n")
+}
+
+fn clear_lines(stdout: &mut Stdout, count: usize) -> Result<()> {
+    for _ in 0..count {
         execute!(
             stdout,
-            cursor::MoveToColumn(1),
-            cursor::MoveUp(1),
-            Clear(ClearType::CurrentLine),
-            Print(line.to_owned() + "\r\n"),
+            cursor::MoveToPreviousLine(1),
+            Clear(ClearType::CurrentLine)
         )?;
     }
 
@@ -106,6 +121,6 @@ fn paint_screen(stdout: &mut Stdout, s: &str) -> Result<()> {
 }
 
 fn deinitialize(stdout: &mut Stdout) -> Result<()> {
-    stdout.execute(cursor::Show)?;
+    execute!(stdout, cursor::Show)?;
     disable_raw_mode()
 }
