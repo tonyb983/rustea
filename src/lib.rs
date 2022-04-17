@@ -35,6 +35,11 @@ pub fn quit_cmd() -> Option<Message> {
     Some(Box::new(Quit))
 }
 
+struct Batch(Vec<Command>);
+pub fn batch_cmd(cmds: Vec<Command>) -> Option<Message> {
+    Some(Box::new(Batch(cmds)))
+}
+
 pub fn run(app: impl App) -> Result<()> {
     let mut app = app;
     let mut stdout = stdout();
@@ -74,10 +79,13 @@ pub fn run(app: impl App) -> Result<()> {
         let msg = msg_rx.recv().unwrap();
         if msg.is::<Quit>() {
             break;
-        }
-        // TODO: add batch processing
-
-        if let Some(cmd) = app.update(msg) {
+        } else if msg.is::<Batch>() {
+            // First check with is, then downcast so we can update without owning msg.
+            let batch = msg.downcast::<Batch>().unwrap();
+            for cmd in batch.0 {
+                cmd_tx.send(cmd).unwrap();
+            }
+        } else if let Some(cmd) = app.update(msg) {
             cmd_tx.send(cmd).unwrap();
         }
 
