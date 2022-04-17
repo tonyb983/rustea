@@ -74,6 +74,7 @@ pub fn run(app: impl App) -> Result<()> {
         if msg.is::<Quit>() {
             break;
         }
+        // TODO: add batch processing
 
         if let Some(cmd) = app.update(msg) {
             cmd_tx.send(cmd).unwrap();
