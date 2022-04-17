@@ -58,11 +58,11 @@ pub fn run(app: impl App) -> Result<()> {
     thread::spawn(move || {
         let cmd = cmd_rx.recv().unwrap();
 
-        thread::spawn(move || {
-            if let Some(msg) = cmd() {
-                msg_tx2.send(msg).unwrap();
-            }
-        });
+        // TODO: process command execution in another thread.
+        // this is going to be very difficult due to the nature
+        if let Some(msg) = cmd() {
+            msg_tx2.send(msg).unwrap();
+        }
     });
 
     initialize(&mut stdout, &app, cmd_tx2)?;
