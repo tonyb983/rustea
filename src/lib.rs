@@ -50,7 +50,7 @@ pub fn run(app: impl App) -> Result<()> {
             match read().unwrap() {
                 Event::Key(event) => msg_tx.send(Box::new(event)).unwrap(),
                 // TODO: handle these events
-                _ => panic!("unexpected event"),
+                _ => (),
             }
         }
     });
