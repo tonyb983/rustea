@@ -160,18 +160,19 @@ fn initialize(stdout: &mut Stdout, app: &impl App, cmd_tx: Sender<Command>) -> R
 
     enable_raw_mode()?;
     execute!(stdout, cursor::Hide)?;
+    execute!(stdout, crossterm::event::EnableMouseCapture)?;
 
     Ok(())
 }
 
 fn normalized_view(app: &impl App) -> String {
     let view = app.view();
-    let view = if !view.ends_with("\n") {
+    let view = if !view.ends_with('\n') {
         view + "\n"
     } else {
         view
     };
-    view.replace("\n", "\r\n")
+    view.replace('\n', "\r\n")
 }
 
 fn clear_lines(stdout: &mut Stdout, count: usize) -> Result<()> {

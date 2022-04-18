@@ -4,6 +4,7 @@ use crossterm::event::{KeyCode, KeyEvent};
 ///
 /// It is very minimal and leaves all control of rendering to the user.
 /// You are able to access the buffer and caret pos, and render the caret however you please.
+#[derive(Debug, Default, Clone)]
 pub struct Input {
     buffer: String,
     pos: usize,
@@ -12,10 +13,7 @@ pub struct Input {
 impl Input {
     /// Simple contructor. Starts with an empty buffer.
     pub fn new() -> Self {
-        Self {
-            buffer: String::new(),
-            pos: 0,
-        }
+        Self::default()
     }
 
     /// Recieves crossterm `KeyEvent`s and updates the buffer and caret position.
@@ -60,7 +58,8 @@ impl Input {
     /// Returns the current buffer.
     pub fn buffer(&self) -> String {
         // return owned buffer so buffer can be read and cleared together
-        self.buffer.to_owned()
+        // renamed to clone to better represent what's happening
+        self.buffer.clone()
     }
 
     /// Overwrites the current buffer with the given string,

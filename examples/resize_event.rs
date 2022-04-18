@@ -24,7 +24,7 @@ impl App for Model {
                 self.terminal_x, self.terminal_y
             )
         } else {
-            format!("Resize terminal")
+            "Resize terminal".to_string()
         }
     }
 }
