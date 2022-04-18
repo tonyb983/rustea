@@ -27,9 +27,9 @@ impl App for Model {
 
                     // make 3 requests to demonstrate command batching
                     let commands = vec![
-                        make_request_command(&url),
-                        make_request_command(&url),
-                        make_request_command(&url),
+                        make_request_command(url.clone()),
+                        make_request_command(url.clone()),
+                        make_request_command(url),
                     ];
                     return Some(command::batch(commands));
                 }
@@ -57,10 +57,12 @@ impl App for Model {
 
 struct WebsiteLengthMessage(usize);
 
-fn make_request_command(url: &str) -> Command {
-    // It's okay to block since commands are multi threaded
-    let website_len = reqwest::blocking::get(url).unwrap().bytes().unwrap().len();
-    Box::new(move || Some(Box::new(WebsiteLengthMessage(website_len))))
+fn make_request_command(url: String) -> Command {
+    Box::new(move || {
+        // It's okay to block since commands are multi threaded
+        let website_len = reqwest::blocking::get(url).unwrap().bytes().unwrap().len();
+        Some(Box::new(WebsiteLengthMessage(website_len)))
+    })
 }
 
 fn main() {
