@@ -134,6 +134,7 @@ pub fn run(app: impl App) -> Result<()> {
     loop {
         let msg = msg_rx.recv().unwrap();
         if msg.is::<command::QuitMessage>() {
+            drop(cmd_tx);
             break;
         } else if msg.is::<command::BatchMessage>() {
             let batch = msg.downcast::<command::BatchMessage>().unwrap();
@@ -189,5 +190,6 @@ fn clear_lines(stdout: &mut Stdout, count: usize) -> Result<()> {
 
 fn deinitialize(stdout: &mut Stdout) -> Result<()> {
     execute!(stdout, cursor::Show)?;
+    execute!(stdout, crossterm::event::DisableMouseCapture)?;
     disable_raw_mode()
 }
