@@ -1,6 +1,16 @@
+use std::any::Any;
+
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::Message;
+
+pub fn some_box<T: Any + Send>(input: T) -> Option<Box<dyn Any + Send>> {
+    Some(Box::new(input))
+}
+
+pub fn none_box() -> Option<Box<dyn Any + Send>> {
+    None
+}
 
 pub fn is_ctrl_c(input: &KeyEvent) -> bool {
     matches!(

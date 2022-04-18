@@ -1,13 +1,13 @@
 [package]
-name = "rustea"
-version = "0.1.1"
-edition = "2021"
-license = "MIT"
 description = "An easy-to-use TUI crate for Rust, based off of the Elm architecture."
-homepage = "https://github.com/lazops/rustea"
 documentation = "https://docs.rs/rustea"
+edition = "2021"
+homepage = "https://github.com/lazops/rustea"
+license = "MIT"
+name = "rustea"
 readme = "README.md"
 repository = "https://github.com/lazops/rustea"
+version = "0.1.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -16,4 +16,5 @@ crossterm = "0.23.2"
 thiserror = "1.0.30"
 
 [dev-dependencies]
+pretty_assertions = "1.2.1"
 reqwest = { version = "0.11", features = ["blocking", "json"] }

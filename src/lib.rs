@@ -2,9 +2,10 @@
 //!
 //! `rustea` is a small crate for easily creating cross-platform TUI applications.
 //! It is based off of the original [go-tea](https://github.com/tj/go-tea) created by TJ Holowaychuk.
-#![feature(associated_type_defaults)]
+#![feature(associated_type_defaults, generic_associated_types)]
 
-pub mod command;
+mod core;
+pub use crate::core::*;
 pub mod utils;
 pub mod view_helper;
 
@@ -175,12 +176,12 @@ pub fn run(app: impl App) -> Result<()> {
 
     loop {
         let msg = msg_rx.recv()?;
-        if msg.is::<command::QuitMessage>() {
+        if msg.is::<core::QuitMessage>() {
             break;
-        } else if msg.is::<command::BatchMessage>() {
+        } else if msg.is::<core::BatchMessage>() {
             // TODO: This unwrap was probably safe since it is being checked with `Any::is` beforehand
             let batch = msg
-                .downcast::<command::BatchMessage>()
+                .downcast::<core::BatchMessage>()
                 .map_err(|_| crate::Error::downcast("Unable to downcast msg (BatchMessage)"))?;
             for cmd in batch.into_iter() {
                 cmd_tx.send(cmd)?;
