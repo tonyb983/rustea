@@ -1,27 +1,18 @@
-use rustea::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use rustea::{command, App, Command, Message};
+use rustea::crossterm::event::{KeyCode, KeyEvent};
+use rustea::{App, Command, Message};
 
 struct Model {
-    last_key: Option<char>,
+    last_key: Option<String>,
 }
 
 impl App for Model {
     fn update(&mut self, msg: Message) -> Option<Command> {
-        if let Ok(key_event) = msg.downcast::<KeyEvent>() {
-            if let KeyModifiers::CONTROL = key_event.modifiers {
-                match key_event.code {
-                    KeyCode::Char('c') => return Some(Box::new(command::quit)),
-                    _ => return None,
-                }
-            }
-
-            match key_event.code {
-                KeyCode::Char(c) => {
-                    self.last_key = Some(c);
-                    return None;
-                }
-                _ => unimplemented!(),
-            }
+        rustea::quit_if_ctrl_c!(msg);
+        if let Some(key_event) = msg.downcast_ref::<KeyEvent>() {
+            self.last_key = match key_event.code {
+                KeyCode::Char(c) => Some(c.to_string()),
+                _ => None,
+            };
         };
 
         None

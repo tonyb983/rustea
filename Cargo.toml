@@ -13,6 +13,7 @@ repository = "https://github.com/lazops/rustea"
 
 [dependencies]
 crossterm = "0.23.2"
+thiserror = "1.0.30"
 
 [dev-dependencies]
 reqwest = { version = "0.11", features = ["blocking", "json"] }

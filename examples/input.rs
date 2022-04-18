@@ -1,4 +1,4 @@
-use rustea::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use rustea::crossterm::event::{KeyCode, KeyEvent};
 use rustea::view_helper::input::Input;
 use rustea::{command, App, Command, Message};
 
@@ -10,11 +10,8 @@ struct Model {
 impl App for Model {
     fn update(&mut self, msg: Message) -> Option<Command> {
         if let Ok(key_event) = msg.downcast::<KeyEvent>() {
-            if let KeyModifiers::CONTROL = key_event.modifiers {
-                match key_event.code {
-                    KeyCode::Char('c') => return Some(Box::new(command::quit)),
-                    _ => return None,
-                }
+            if rustea::utils::is_ctrl_c(&key_event) {
+                return Some(Box::new(command::quit));
             }
 
             match key_event.code {

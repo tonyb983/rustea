@@ -2,18 +2,23 @@
 //!
 //! `rustea` is a small crate for easily creating cross-platform TUI applications.
 //! It is based off of the original [go-tea](https://github.com/tj/go-tea) created by TJ Holowaychuk.
+#![feature(associated_type_defaults)]
 
-pub mod view_helper;
-pub extern crate crossterm;
 pub mod command;
+pub mod utils;
+pub mod view_helper;
+
+mod error;
+pub use error::{Error, Result};
 
 use std::{
     any::Any,
-    io::{stdout, Result, Stdout},
+    io::{stdout, Stdout},
     sync::mpsc::{self, Sender},
     thread,
 };
 
+pub use crossterm;
 use crossterm::{
     cursor,
     event::{read, Event},
@@ -44,6 +49,8 @@ use crossterm::{
 ///     model.response = Some(res);
 /// }
 /// ```
+///
+/// TODO: Should this be a wrapper type instead of a type alias?
 pub type Message = Box<dyn Any + Send>;
 
 /// A boxed function or closure that performs computations and optionally dispatches messages.
@@ -54,14 +61,34 @@ pub type Message = Box<dyn Any + Send>;
 /// # Example
 ///
 /// ```
+/// # use rustea::Command;
+/// # #[derive(Debug, Clone, PartialEq, Eq)]
+/// # struct HttpResponse(String);
+/// # impl HttpResponse { pub fn get(&self) -> String { self.0.clone() } }
+/// # struct Response(String);
+/// # impl Response { pub fn text(&self) -> String { self.0.clone() } }
+/// fn http_get(url: &str) -> Response {
+///     // Send http get request using library or whatever.
+///     // For example:
+///     // reqwest::blocking::get(url).unwrap()
+///     # Response("Hello World".to_string())
+/// }
+///
 /// // a constructor function
 /// fn make_request_command(url: &str) -> Command {
 ///     // it's okay to block since commands are multi threaded
-///     let text_response = reqwest::blocking::get(url).unwrap().text().unwrap();
+///     let text_response = http_get(url).text();
 ///     
 ///     // the command itself
 ///     Box::new(move || Some(Box::new(HttpResponse(text_response))))
 /// }
+///
+/// # let command = make_request_command("https://www.rust-lang.org");
+/// # let response = command().unwrap().downcast::<HttpResponse>().unwrap();
+/// # assert_eq!(response.get(), "Hello World");
+/// ```
+///
+/// TODO: Should this be a wrapper type instead of a type alias?
 pub type Command = Box<dyn FnOnce() -> Option<Message> + Send + 'static>;
 
 /// Event representing a terminal resize (x, y).
@@ -83,12 +110,23 @@ pub struct ResizeEvent(pub u16, pub u16);
 ///
 /// For examples, check the `examples` directory.
 pub trait App {
+    type Output: std::fmt::Display = String;
+    /// Perform any app-specific initialization here.
+    /// TODO: Should this be a `&mut self`? App might need to change state during init
     fn init(&self) -> Option<Command> {
         None
     }
 
+    /// Called every time a message is received. Main application logic should live here.
     fn update(&mut self, msg: Message) -> Option<Command>;
-    fn view(&self) -> String;
+
+    /// Called after every update to retrieve the current visible state of your application.
+    /// TODO: Does this have to be a String? Could we maybe return `impl Display` instead to give more flexibility?
+    fn view(&self) -> Self::Output;
+
+    /// Called when the application is closing, to perform any clean-up or resource deallocation
+    /// your app requires.
+    fn uninit(&mut self) {}
 }
 
 /// Runs your application.
@@ -108,22 +146,26 @@ pub fn run(app: impl App) -> Result<()> {
     let (cmd_tx, cmd_rx) = mpsc::channel::<Command>();
     let cmd_tx2 = cmd_tx.clone();
 
-    thread::spawn(move || loop {
-        match read().unwrap() {
-            Event::Key(event) => msg_tx.send(Box::new(event)).unwrap(),
-            Event::Mouse(event) => msg_tx.send(Box::new(event)).unwrap(),
-            Event::Resize(x, y) => msg_tx.send(Box::new(ResizeEvent(x, y))).unwrap(),
+    let _read_handle = thread::spawn(move || loop {
+        match read() {
+            Ok(r) => match r {
+                Event::Key(event) => msg_tx.send(Box::new(event))?,
+                Event::Mouse(event) => msg_tx.send(Box::new(event))?,
+                Event::Resize(x, y) => msg_tx.send(Box::new(ResizeEvent(x, y)))?,
+            },
+            Err(err) => return crate::Result::<()>::Err(err.into()),
         }
     });
 
-    thread::spawn(move || loop {
-        let cmd = cmd_rx.recv().unwrap();
-
+    let _cmd_handle = thread::spawn(move || loop {
+        let cmd = match cmd_rx.recv() {
+            Ok(cmd) => cmd,
+            Err(err) => return crate::Result::<()>::Err(err.into()),
+        };
         let msg_tx2 = msg_tx2.clone();
-        thread::spawn(move || {
-            if let Some(msg) = cmd() {
-                msg_tx2.send(msg).unwrap();
-            }
+        thread::spawn(move || match cmd() {
+            Some(msg) => msg_tx2.send(msg),
+            None => Ok(()),
         });
     });
 
@@ -132,16 +174,19 @@ pub fn run(app: impl App) -> Result<()> {
     execute!(stdout, Print(&prev))?;
 
     loop {
-        let msg = msg_rx.recv().unwrap();
+        let msg = msg_rx.recv()?;
         if msg.is::<command::QuitMessage>() {
             break;
         } else if msg.is::<command::BatchMessage>() {
-            let batch = msg.downcast::<command::BatchMessage>().unwrap();
-            for cmd in batch.0 {
-                cmd_tx.send(cmd).unwrap();
+            // TODO: This unwrap was probably safe since it is being checked with `Any::is` beforehand
+            let batch = msg
+                .downcast::<command::BatchMessage>()
+                .map_err(|_| crate::Error::downcast("Unable to downcast msg (BatchMessage)"))?;
+            for cmd in batch.into_iter() {
+                cmd_tx.send(cmd)?;
             }
         } else if let Some(cmd) = app.update(msg) {
-            cmd_tx.send(cmd).unwrap();
+            cmd_tx.send(cmd)?;
         }
 
         let curr = normalized_view(&app);
@@ -150,12 +195,32 @@ pub fn run(app: impl App) -> Result<()> {
         prev = curr;
     }
 
-    deinitialize(&mut stdout)
+    // Uncommenting these seems to cause the app to hang on exit, but otherwise how can
+    //   we retrieve the error from the result.
+    // if let Err(err) = read_handle.join() {
+    //     eprintln!("Error joining read thread: {:?}", err);
+    // }
+    // if let Err(err) = cmd_handle.join() {
+    //     eprintln!("Error joining command thread: {:?}", err);
+    // }
+
+    // This also causes the app to hang on exit.
+    // if let Err(err) = read_handle.join() {
+    //     std::panic::resume_unwind(err)
+    // }
+    // if let Err(err) = cmd_handle.join() {
+    //     std::panic::resume_unwind(err)
+    // }
+
+    deinitialize(&mut stdout, &mut app)
 }
 
+/// Initializes the application, calling the `init` method of the given `app` and executing
+/// any command that it may return, enabling raw mode through [`crossterm`], hiding the cursor, and
+/// initializing mouse event capture.
 fn initialize(stdout: &mut Stdout, app: &impl App, cmd_tx: Sender<Command>) -> Result<()> {
     if let Some(cmd) = app.init() {
-        cmd_tx.send(cmd).unwrap();
+        cmd_tx.send(cmd)?;
     }
 
     enable_raw_mode()?;
@@ -166,13 +231,16 @@ fn initialize(stdout: &mut Stdout, app: &impl App, cmd_tx: Sender<Command>) -> R
 }
 
 fn normalized_view(app: &impl App) -> String {
-    let view = app.view();
+    let view = app.view().to_string();
     let view = if !view.ends_with('\n') {
         view + "\n"
     } else {
         view
     };
-    view.replace('\n', "\r\n")
+    #[cfg(windows)]
+    {
+        view.replace('\n', "\r\n")
+    }
 }
 
 fn clear_lines(stdout: &mut Stdout, count: usize) -> Result<()> {
@@ -187,7 +255,10 @@ fn clear_lines(stdout: &mut Stdout, count: usize) -> Result<()> {
     Ok(())
 }
 
-fn deinitialize(stdout: &mut Stdout) -> Result<()> {
+fn deinitialize(stdout: &mut Stdout, app: &mut impl App) -> Result<()> {
+    app.uninit();
+    execute!(stdout, crossterm::event::DisableMouseCapture)?;
     execute!(stdout, cursor::Show)?;
-    disable_raw_mode()
+    disable_raw_mode()?;
+    Ok(())
 }
