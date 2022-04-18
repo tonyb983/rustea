@@ -11,6 +11,8 @@ This is a re-implementation of Go's [Tea](https://github.com/tj/go-tea), created
 - Cross-platform, thanks to `crossterm`.
 - The praised Elm architecture.
 
+https://user-images.githubusercontent.com/103537080/163859892-3e9364ba-395d-4f4a-8c8c-984b8bea2abf.mov
+
 ## Installation and Docs
 
 Install by putting `rustea = "0.1.0"` in your `Cargo.toml` dependencies.
