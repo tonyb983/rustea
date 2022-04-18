@@ -134,7 +134,8 @@ pub fn run(app: impl App) -> Result<()> {
     loop {
         let msg = msg_rx.recv().unwrap();
         if msg.is::<command::QuitMessage>() {
-            break;
+            deinitialize(&mut stdout)?;
+            return Ok(());
         } else if msg.is::<command::BatchMessage>() {
             let batch = msg.downcast::<command::BatchMessage>().unwrap();
             for cmd in batch.0 {
@@ -149,8 +150,6 @@ pub fn run(app: impl App) -> Result<()> {
         execute!(stdout, Print(&curr))?;
         prev = curr;
     }
-
-    deinitialize(&mut stdout)
 }
 
 fn initialize(stdout: &mut Stdout, app: &impl App, cmd_tx: Sender<Command>) -> Result<()> {
