@@ -1,6 +1,6 @@
 [package]
 name = "rustea"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 description = "An easy-to-use TUI crate for Rust, based off of the Elm architecture."
