@@ -19,7 +19,7 @@ impl App for Model {
 
             match key_event.code {
                 KeyCode::Enter => {
-                    self.name = Some(self.input.buffer().to_owned());
+                    self.name = Some(self.input.buffer());
                     self.input.clear();
                     // return Some(quit_cmd);
                     return None;
